@@ -111,11 +111,7 @@ type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSO
       :<|> "performRESTCall"            :> QueryParam "filter" String  :> Get '[JSON] ResponseData
       :<|> "users"                      :> Get '[JSON] [User]
       :<|> "user"                       :> Capture "name" String:> Get '[JSON] User
-<<<<<<< HEAD
       :<|> "argon"                      :> Get '[JSON] (FilePath, AnalysisResult)
-=======
-      :<|> "argon"                      :> Get '[JSON] ResponseData
->>>>>>> d8971974c7e64e391362e81714d7292e27dbc391
 
 
 -- | Now that we have the Service API defined, we next move on to implementing the service. The startApp function is
@@ -188,7 +184,7 @@ server = loadEnvironmentVariable
     user::String->Handler User
     user name = return $ User name "1"
 
-<<<<<<< HEAD
+
     argon ::Handler (FilePath, AnalysisResult)
     argon =liftIO $ do
       -- args <- parseArgsOrExit patterns =<< getArgs
@@ -196,13 +192,7 @@ server = loadEnvironmentVariable
       -- analyze getConfig "src"
       (file,analysis) <- analyze getConfig "src/Lib.hs"
       return (file,analysis)
-=======
-    argon ::Handler ResponseData
-    argon =liftIO $ do
-      args <- parseArgsOrExit patterns =<< getArgs
-      cc <- read $ getOpt args "1" "min" 
-      return $ ResponseData "hello"
->>>>>>> d8971974c7e64e391362e81714d7292e27dbc391
+
 
     loadEnvironmentVariable :: Maybe String -> Handler ResponseData
     loadEnvironmentVariable ms = liftIO $ do
@@ -476,7 +466,6 @@ defEnv env fn def doWarn = lookupEnv env >>= \ e -> case e of
 testArgon :: IO ()
 testArgon = do
     args <- parseArgsOrExit patterns =<< getArgs
-<<<<<<< HEAD
     -- let ins = args `getAllArgs` argument "paths"
     -- conf <- readConfig args
     -- conf <- getConfig
@@ -486,16 +475,7 @@ testArgon = do
                   >-> P.map (filterResults getConfig)
                   >-> P.filter filterNulls
         runSafeT $ runEffect $ exportStream getConfig source
-=======
-    let ins = args `getAllArgs` argument "paths"
-    conf <- readConfig args
-    forM_ ins $ \path -> do
-        let source = allFiles path
-                  >-> P.mapM (liftIO . analyze conf)
-                  >-> P.map (filterResults conf)
-                  >-> P.filter filterNulls
-        runSafeT $ runEffect $ exportStream conf source
->>>>>>> d8971974c7e64e391362e81714d7292e27dbc391
+
 
 patterns :: Docopt
 patterns = [docoptFile|USAGE.txt|]
@@ -521,7 +501,7 @@ readConfig args = do
                                else Colored
     }
 
-<<<<<<< HEAD
+
 getConfig ::Config
 getConfig = Config {
       minCC       = read "2"
@@ -533,13 +513,4 @@ getConfig = Config {
 
 getPath::[String]
 getPath = ["src"]
-=======
-getConfig :: Config
-getConfig = Config {
-    --  minCC       = read $ getOpt args "1" "min"
-     exts        = []
-    --, headers     = args `getAllArgs` longOption "cabal-macros"
-    --, includeDirs = args `getAllArgs` longOption "include-dir"
-    , outputMode  = JSON
-    }
->>>>>>> d8971974c7e64e391362e81714d7292e27dbc391
+
