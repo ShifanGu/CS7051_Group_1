@@ -1,0 +1,28 @@
+Configuring pipes-files-0.1.1...
+Building pipes-files-0.1.1...
+Preprocessing library pipes-files-0.1.1...
+[1 of 3] Compiling Pipes.Files.Types ( Pipes/Files/Types.hs, .stack-work/dist/x86_64-osx/Cabal-1.22.5.0/build/Pipes/Files/Types.o )
+[2 of 3] Compiling Pipes.Files.Directory ( Pipes/Files/Directory.hs, .stack-work/dist/x86_64-osx/Cabal-1.22.5.0/build/Pipes/Files/Directory.o )
+[3 of 3] Compiling Pipes.Files      ( Pipes/Files.hs, .stack-work/dist/x86_64-osx/Cabal-1.22.5.0/build/Pipes/Files.o )
+
+Helper.c:15:10:
+     warning: implicitly declaring library function 'strlen' with type 'unsigned long (const char *)'
+      return strlen(d->d_name);
+             ^
+
+Helper.c:15:10:
+     note: please include the header <string.h> or explicitly provide a declaration for 'strlen'
+1 warning generated.
+
+Helper.c:15:10:
+     warning: implicitly declaring library function 'strlen' with type 'unsigned long (const char *)'
+      return strlen(d->d_name);
+             ^
+
+Helper.c:15:10:
+     note: please include the header <string.h> or explicitly provide a declaration for 'strlen'
+1 warning generated.
+In-place registering pipes-files-0.1.1...
+Installing library in
+/Users/momoca/Desktop/use-haskell/.stack-work/install/x86_64-osx/lts-6.3/7.10.3/lib/x86_64-osx-ghc-7.10.3/pipes-files-0.1.1-IpWFkCG1QdyKbm3DZA4RAB
+Registering pipes-files-0.1.1...
