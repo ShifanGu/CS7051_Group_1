@@ -179,7 +179,7 @@ server = loadEnvironmentVariable
     -- Now we will explain each handler in turn, along with any helper functions we write to help us implement the
     -- various endpoints.
     users::Handler [User]
-    users = return [User "kevin" "1", User "Mona" "2"]
+    users = return [User "user 1" "1", User "user 2" "2"]
 
     user::String->Handler User
     user name = return $ User name "1"
@@ -462,44 +462,6 @@ defEnv env fn def doWarn = lookupEnv env >>= \ e -> case e of
                                       " is not set. Defaulting to " ++ (show def))
         return def
 
-
-testArgon :: IO ()
-testArgon = do
-    args <- parseArgsOrExit patterns =<< getArgs
-    -- let ins = args `getAllArgs` argument "paths"
-    -- conf <- readConfig args
-    -- conf <- getConfig
-    forM_ getPath $ \path -> do
-        let source = allFiles path
-                  >-> P.mapM (liftIO . analyze getConfig)
-                  >-> P.map (filterResults getConfig)
-                  >-> P.filter filterNulls
-        runSafeT $ runEffect $ exportStream getConfig source
-
-
-patterns :: Docopt
-patterns = [docoptFile|USAGE.txt|]
-
-getArgOrExit :: Arguments -> System.Console.Docopt.Option -> IO String
-getArgOrExit = getArgOrExitWith patterns
-
-getOpt :: Arguments -> String -> String -> String
-getOpt args def opt = getArgWithDefault args def $ longOption opt
-
-readConfig :: Arguments -> IO Config
-readConfig args = do
-    xFlags <- maybe (return []) parseExts $ getArg args $ longOption "cabal-file"
-    return Config {
-      minCC       = read $ getOpt args "1" "min"
-    , exts        = xFlags
-    , headers     = args `getAllArgs` longOption "cabal-macros"
-    , includeDirs = args `getAllArgs` longOption "include-dir"
-    , outputMode  = if args `isPresent` longOption "json"
-                       then JSON
-                       else if args `isPresent` longOption "no-color"
-                               then BareText
-                               else Colored
-    }
 
 
 getConfig ::Config
