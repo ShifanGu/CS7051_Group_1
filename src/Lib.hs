@@ -72,11 +72,12 @@ import           System.Console.Docopt
 import           Pipes
 import           Pipes.Safe (runSafeT)
 import qualified Pipes.Prelude as P
-import           Control.Monad (forM_)
+import           Control.Monad (forM_,forM)
 import           System.Directory (getDirectoryContents)
 import           System.Directory (doesFileExist)
 import           System.Directory (listDirectory)
 import           System.FilePath.Posix
+import           Data.List (isSuffixOf)
 -- | The Servant library has a very elegant model for defining a REST API. We shall demonstrate here. First, we shall
 -- define the data types that will be passed in the REST calls. We will define a simple data type that passes some data
 -- from client to the server first. There is nothing special about the data being passed - this is a demonstration
@@ -117,12 +118,12 @@ type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSO
       :<|> "performRESTCall"            :> QueryParam "filter" String  :> Get '[JSON] ResponseData
       :<|> "users"                      :> Get '[JSON] [User]
       :<|> "user"                       :> Capture "name" String:> Get '[JSON] User
-      :<|> "argon"                      :> Get '[JSON] (FilePath, AnalysisResult)
-      :<|> "fetchRepo" :> QueryParam "url" String:> Get '[JSON] FetchResponseMsg
+      :<|> "argon"                      :> Get '[JSON] [(FilePath, AnalysisResult)]
+      :<|> "fetchRepo"                  :> QueryParam "url" String:> Get '[JSON] FetchResponseMsg
 
 data FetchResponseMsg = FetchResponseMsg { msg :: String} deriving (Eq, Show)
 
--- $(deriveJSON defaultOptions ''FetchResponseMsg)
+$(deriveJSON defaultOptions ''FetchResponseMsg)
 
 
 -- | Now that we have the Service API defined, we next move on to implementing the service. The startApp function is
@@ -177,23 +178,26 @@ server = loadEnvironmentVariable
     :<|> storeMessage
     :<|> searchMessage
     :<|> performRESTCall
-    :<|> fetchRepo
+    :<|> users
+    :<|> user
     :<|> argon
+    :<|> fetchRepo
+
 
   where
+
+
 
     user::String->Handler User
     user name =liftIO $ do
       --isFileExist <- doesFileExist "src/Lib.hs"
-      --putStrLn $ show $ fileList
-      filterFiles "./"
+      --putStrLn $ show $ fileList    
       --result <- listDirectory "./"
       --putStrLn $ show $ result
-
       return $ User name "1"
 
-    -- users::Handler [User]import System.Process
-    -- users = return [User "user 1" "1", User "user 2" "2"]
+    users::Handler [User]
+    users = return [User "user 1" "1", User "kanika" "2"]
 
     -- user::String->Handler User
     -- user name = return $ User name "1"
@@ -209,13 +213,16 @@ server = loadEnvironmentVariable
 
 
 
-    argon ::Handler (FilePath, AnalysisResult)
+    argon :: Handler [(FilePath, AnalysisResult)]
     argon =liftIO $ do
       -- args <- parseArgsOrExit patterns =<< getArgs
       -- testArgon
       -- analyze getConfig "src"
-      (file,analysis) <- analyze getConfig "src/Lib.hs"
-      return (file,analysis)
+      files <-traverseDir "./"  
+      results<-forM (filterHaskellFile files) $ \path -> do
+        (file,analysis) <- analyze getConfig path
+        return [(file,analysis)]
+      return (concat results)
 
 
     loadEnvironmentVariable :: Maybe String -> Handler ResponseData
@@ -501,28 +508,47 @@ getPath::[String]
 getPath = ["src"]
 
 
+
+traverseDir :: FilePath -> IO [FilePath]
+traverseDir top = do
+  ds <- listDirectory top
+  paths <- forM ds $ \d -> do
+    let path = top </> d
+    isFile<-liftIO $ doesFileExist path
+    if not isFile
+      then traverseDir path
+      else return [path]
+  return (concat paths)
+
+filterHaskellFile :: [FilePath] ->[FilePath]
+filterHaskellFile fileList = filter (".hs" `isSuffixOf`) fileList
+
+
 filterFiles :: FilePath ->IO [FilePath]
 filterFiles path = do 
   root <- listDirectory path
   --putStrLn $ show root
-  printList path root []
+  --
+  printList path root
   return root
+
   where 
 
-    printList :: FilePath->[FilePath] -> [FilePath]
-    printList base root a = do 
+    printList :: FilePath->[FilePath] -> IO ()
+    printList base root = do 
       forM_ root $ \name -> do 
         let b = (base </> name)
         isFile<- liftIO $ doesFileExist $ base </> name
         if not isFile then do 
                         result <- listDirectory $ base </> name
-                        printList (base </> name) result a
-                        return a 
+
+                        printList (base </> name) result
                         --putStrLn $ show a
                       else do
-                        return (b:a)
-                        putStrLn $ show (b:a)
+                        putStrLn $ show "hello"
                         --putStrLn $ base </> name
+
+
 
                         
 
