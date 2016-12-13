@@ -36,7 +36,7 @@ module Lib
 -- qualified imports of full prefixes to disambiguate. The compiler will tell you where the problem is if this occurs.
 
 import           Control.Monad                (when)
-import           Control.Monad.IO.Class
+import           Control.Monad.IO.Class       (liftIO)
 import           Control.Monad.Trans.Except   (ExceptT)
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
@@ -65,6 +65,7 @@ import           System.Log.Handler           (setFormatter)
 import           System.Log.Handler.Simple
 import           System.Log.Handler.Syslog
 import           System.Log.Logger
+import           System.Process
 
 import           Argon
 import           System.Console.Docopt
@@ -108,6 +109,7 @@ data User = User { username :: String
                   ,  userid :: String
                  } deriving (Generic, FromJSON, ToJSON, FromBSON)
 
+
 type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSON] ResponseData
       :<|> "getREADME"                  :> Get '[JSON] ResponseData
       :<|> "storeMessage"               :> ReqBody '[JSON] Message  :> Post '[JSON] Bool
@@ -116,6 +118,11 @@ type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSO
       :<|> "users"                      :> Get '[JSON] [User]
       :<|> "user"                       :> Capture "name" String:> Get '[JSON] User
       :<|> "argon"                      :> Get '[JSON] (FilePath, AnalysisResult)
+      :<|> "fetchRepo" :> QueryParam "url" String:> Get '[JSON] FetchResponseMsg
+
+data FetchResponseMsg = FetchResponseMsg { msg :: String} deriving (Eq, Show)
+
+-- $(deriveJSON defaultOptions ''FetchResponseMsg)
 
 
 -- | Now that we have the Service API defined, we next move on to implementing the service. The startApp function is
@@ -170,20 +177,10 @@ server = loadEnvironmentVariable
     :<|> storeMessage
     :<|> searchMessage
     :<|> performRESTCall
-    :<|> users
-    :<|> user
+    :<|> fetchRepo
     :<|> argon
+
   where
-    -- | where is just a way of ensuring that the following functions are scoped to the server function. Each function
-    -- below hasa type matching the end point parameters, with the return type being of type `Handler a`, where a is the
-    -- type of data returned by the endpoint. Handler is a Monad. This may strike terror - it should not, but th great
-    -- news is that we don't have to understand Monads at all really, providing we follow some simple programming
-    -- conventions when writing handlers.
-    --
-    -- Now we will explain each handler in turn, along with any helper functions we write to help us implement the
-    -- various endpoints.
-    users::Handler [User]
-    users = return [User "user 1" "1", User "user 2" "2"]
 
     user::String->Handler User
     user name =liftIO $ do
@@ -194,6 +191,21 @@ server = loadEnvironmentVariable
       --putStrLn $ show $ result
 
       return $ User name "1"
+
+    -- users::Handler [User]import System.Process
+    -- users = return [User "user 1" "1", User "user 2" "2"]
+
+    -- user::String->Handler User
+    -- user name = return $ User name "1"
+
+
+    fetchRepo :: Maybe String -> Handler FetchResponseMsg
+    fetchRepo url = liftIO $ do
+        case url of
+          Nothing -> return $ FetchResponseMsg "aaagggghh!"
+          Just url' -> do
+              callCommand $ "git clone " ++ url'
+              return $ FetchResponseMsg "Great Success"
 
 
 
@@ -513,10 +525,4 @@ filterFiles path = do
                         --putStrLn $ base </> name
 
                         
-
-  
-  
-
-
-
 

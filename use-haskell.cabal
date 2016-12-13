@@ -22,6 +22,7 @@ library
                      , docopt
                      , pipes
                      , pipes-safe
+                     , process
                      , aeson
                      , servant
                      , servant-server
