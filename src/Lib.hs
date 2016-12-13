@@ -497,7 +497,7 @@ filterFiles path = do
   return root
   where 
 
-    printList :: FilePath->[FilePath] -> [FilePath]-> IO ()
+    printList :: FilePath->[FilePath] -> [FilePath]
     printList base root a = do 
       forM_ root $ \name -> do 
         let b = (base </> name)
@@ -505,8 +505,10 @@ filterFiles path = do
         if not isFile then do 
                         result <- listDirectory $ base </> name
                         printList (base </> name) result a
+                        return a 
                         --putStrLn $ show a
                       else do
+                        return (b:a)
                         putStrLn $ show (b:a)
                         --putStrLn $ base </> name
 
