@@ -72,6 +72,10 @@ import           Pipes
 import           Pipes.Safe (runSafeT)
 import qualified Pipes.Prelude as P
 import           Control.Monad (forM_)
+import           System.Directory (getDirectoryContents)
+import           System.Directory (doesFileExist)
+import           System.Directory (listDirectory)
+import           System.FilePath.Posix
 -- | The Servant library has a very elegant model for defining a REST API. We shall demonstrate here. First, we shall
 -- define the data types that will be passed in the REST calls. We will define a simple data type that passes some data
 -- from client to the server first. There is nothing special about the data being passed - this is a demonstration
@@ -182,7 +186,15 @@ server = loadEnvironmentVariable
     users = return [User "user 1" "1", User "user 2" "2"]
 
     user::String->Handler User
-    user name = return $ User name "1"
+    user name =liftIO $ do
+      --isFileExist <- doesFileExist "src/Lib.hs"
+      --putStrLn $ show $ fileList
+      filterFiles "./"
+      --result <- listDirectory "./"
+      --putStrLn $ show $ result
+
+      return $ User name "1"
+
 
 
     argon ::Handler (FilePath, AnalysisResult)
@@ -475,4 +487,34 @@ getConfig = Config {
 
 getPath::[String]
 getPath = ["src"]
+
+
+filterFiles :: FilePath ->IO [FilePath]
+filterFiles path = do 
+  root <- listDirectory path
+  --putStrLn $ show root
+  printList path root []
+  return root
+  where 
+
+    printList :: FilePath->[FilePath] -> [FilePath]-> IO ()
+    printList base root a = do 
+      forM_ root $ \name -> do 
+        let b = (base </> name)
+        isFile<- liftIO $ doesFileExist $ base </> name
+        if not isFile then do 
+                        result <- listDirectory $ base </> name
+                        printList (base </> name) result a
+                        --putStrLn $ show a
+                      else do
+                        putStrLn $ show (b:a)
+                        --putStrLn $ base </> name
+
+                        
+
+  
+  
+
+
+
 
