@@ -247,6 +247,10 @@ server = loadEnvironmentVariable
     -- in english, read file idenfitied by the head of the argument list and return as a ResponseData structure
     getREADME' = liftIO $ ResponseData <$> (readFile . head =<< getArgs)
 
+
+    --http request
+
+
     -- Here, as a comparison or relative code complexity,
     -- is an example of how to perform the equivalent of the
     -- Haskell readFile method in Java, but remember that this
@@ -476,3 +480,10 @@ getConfig = Config {
 getPath::[String]
 getPath = ["src"]
 
+get :: String-> IO String
+get url = simpleHTTP (getRequest url) >>= getResponseBody
+
+-- get the response code
+getCode :: String -> IO ResponseCode
+getCode url = simpleHttp req >>= getResponseCode
+    where req = getRequest url
