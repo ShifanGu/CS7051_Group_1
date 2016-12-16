@@ -78,6 +78,7 @@ import           System.Directory (doesFileExist)
 import           System.Directory (listDirectory)
 import           System.FilePath.Posix
 import           Data.List (isSuffixOf)
+import           Network.Http
 -- | The Servant library has a very elegant model for defining a REST API. We shall demonstrate here. First, we shall
 -- define the data types that will be passed in the REST calls. We will define a simple data type that passes some data
 -- from client to the server first. There is nothing special about the data being passed - this is a demonstration
@@ -191,7 +192,7 @@ server = loadEnvironmentVariable
     user::String->Handler User
     user name =liftIO $ do
       --isFileExist <- doesFileExist "src/Lib.hs"
-      --putStrLn $ show $ fileList    
+      --putStrLn $ show $ fileList
       --result <- listDirectory "./"
       --putStrLn $ show $ result
       return $ User name "1"
@@ -218,7 +219,7 @@ server = loadEnvironmentVariable
       -- args <- parseArgsOrExit patterns =<< getArgs
       -- testArgon
       -- analyze getConfig "src"
-      files <-traverseDir "./"  
+      files <-traverseDir "./"
       results<-forM (filterHaskellFile files) $ \path -> do
         (file,analysis) <- analyze getConfig path
         return [(file,analysis)]
@@ -525,21 +526,21 @@ filterHaskellFile fileList = filter (".hs" `isSuffixOf`) fileList
 
 
 filterFiles :: FilePath ->IO [FilePath]
-filterFiles path = do 
+filterFiles path = do
   root <- listDirectory path
   --putStrLn $ show root
   --
   printList path root
   return root
 
-  where 
+  where
 
     printList :: FilePath->[FilePath] -> IO ()
-    printList base root = do 
-      forM_ root $ \name -> do 
+    printList base root = do
+      forM_ root $ \name -> do
         let b = (base </> name)
         isFile<- liftIO $ doesFileExist $ base </> name
-        if not isFile then do 
+        if not isFile then do
                         result <- listDirectory $ base </> name
 
                         printList (base </> name) result
@@ -548,7 +549,10 @@ filterFiles path = do
                         putStrLn $ show "hello"
                         --putStrLn $ base </> name
 
+-- http request
+getHttpR :: String -> IO String
+getHttpR url = simpleHTTP (getRequest url) >>= getResponseBody
 
-
-                        
-
+getCode :: String -> IO ResponseCode
+getCode url = simpleHTTP req >>= getResponseCode
+    where req = getRequest url
