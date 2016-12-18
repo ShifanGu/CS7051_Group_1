@@ -119,7 +119,7 @@ type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSO
       :<|> "users"                      :> Get '[JSON] [User]
       :<|> "user"                       :> Capture "name" String:> Get '[JSON] User
       :<|> "argon"                      :> Get '[JSON] [(FilePath, AnalysisResult)]
-      :<|> "fetchRepo"                  :> QueryParam "url" String:> Get '[JSON] FetchResponseMsg
+      :<|> "fetchRepo"                  :> QueryParam "url" String:> Get '[JSON] [(FilePath, AnalysisResult)]
 
 data FetchResponseMsg = FetchResponseMsg { msg :: String} deriving (Eq, Show)
 
@@ -191,7 +191,7 @@ server = loadEnvironmentVariable
     user::String->Handler User
     user name =liftIO $ do
       --isFileExist <- doesFileExist "src/Lib.hs"
-      --putStrLn $ show $ fileList    
+      --putStrLn $ show $ fileList
       --result <- listDirectory "./"
       --putStrLn $ show $ result
       return $ User name "1"
@@ -203,13 +203,17 @@ server = loadEnvironmentVariable
     -- user name = return $ User name "1"
 
 
-    fetchRepo :: Maybe String -> Handler FetchResponseMsg
+    fetchRepo :: Maybe String -> Handler [(FilePath, AnalysisResult)]
     fetchRepo url = liftIO $ do
         case url of
-          Nothing -> return $ FetchResponseMsg "aaagggghh!"
+          -- Nothing -> return $ FetchResponseMsg "aaagggghh!"
           Just url' -> do
-              callCommand $ "git clone " ++ url'
-              return $ FetchResponseMsg "Great Success"
+              callCommand $ "git clone " ++ url' ++ " repos"
+              files <-traverseDir "./repos/"
+              results<-forM (filterHaskellFile files) $ \path -> do
+                (file,analysis) <- analyze getConfig path
+                return [(file,analysis)]
+              return (concat results)
 
 
 
@@ -218,7 +222,7 @@ server = loadEnvironmentVariable
       -- args <- parseArgsOrExit patterns =<< getArgs
       -- testArgon
       -- analyze getConfig "src"
-      files <-traverseDir "./"  
+      files <-traverseDir "./repos/"
       results<-forM (filterHaskellFile files) $ \path -> do
         (file,analysis) <- analyze getConfig path
         return [(file,analysis)]
@@ -525,21 +529,21 @@ filterHaskellFile fileList = filter (".hs" `isSuffixOf`) fileList
 
 
 filterFiles :: FilePath ->IO [FilePath]
-filterFiles path = do 
+filterFiles path = do
   root <- listDirectory path
   --putStrLn $ show root
   --
   printList path root
   return root
 
-  where 
+  where
 
     printList :: FilePath->[FilePath] -> IO ()
-    printList base root = do 
-      forM_ root $ \name -> do 
+    printList base root = do
+      forM_ root $ \name -> do
         let b = (base </> name)
         isFile<- liftIO $ doesFileExist $ base </> name
-        if not isFile then do 
+        if not isFile then do
                         result <- listDirectory $ base </> name
 
                         printList (base </> name) result
@@ -547,8 +551,3 @@ filterFiles path = do
                       else do
                         putStrLn $ show "hello"
                         --putStrLn $ base </> name
-
-
-
-                        
-
