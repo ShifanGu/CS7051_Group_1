@@ -116,7 +116,7 @@ type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSO
       :<|> "getREADME"                  :> Get '[JSON] ResponseData
       :<|> "authors"                    :> Get '[JSON] [Author]
       :<|> "author"                     :> Capture "name" String:> Get '[JSON] Author
-      :<|> "analysisAllTheRepo"         :> Get '[JSON] [(FilePath, AnalysisResult)]
+      :<|> "analysisAllTheRepo"         :> Get '[JSON] [(FilePath, Double)]
       :<|> "fetchRepo"                  :> QueryParam "url" String:> Get '[JSON] FetchResponseMsg
       :<|> "methodComplexity"           :> QueryParam "url" String:> Get '[JSON] [(FilePath, AnalysisResult)]
       :<|> "fileComplexity"             :> QueryParam "url" String:> Get '[JSON] [(FilePath, Double)]
@@ -253,10 +253,10 @@ server = loadEnvironmentVariable
               return (name,result)
 
 
-    analysisAllTheRepo :: Handler [(FilePath, AnalysisResult)]
+    analysisAllTheRepo :: Handler [(FilePath, Double)]
     analysisAllTheRepo =liftIO $ do
-      --results<-computeMethodLevelAvg "./repo"
-      return results
+      --wait to finish
+      return projectComplexitys
 
 
     computeMethodLevelAvg :: FilePath ->IO [(FilePath, AnalysisResult)]
