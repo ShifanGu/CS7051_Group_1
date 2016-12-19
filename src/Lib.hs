@@ -252,17 +252,24 @@ server = loadEnvironmentVariable
               result <- computeProjectLevelAvg ("./" ++ name)
               return (name,result)
 
-
+--to analyze the repositories
     analysisAllTheRepo :: Handler [(FilePath, Double)]
     analysisAllTheRepo =liftIO $ do
-      --wait to finish
+      --results<-computeMethodLevelAvg "./repo"
+      projectNames <- listDirectory "./repo"
+      projectPaths <- forM projectNames $ \project -> do
+        return ("./repo/"++project)
+      projectComplexitys <- forM projectPaths $ \projectPaths -> do
+        result<-computeProjectLevelAvg projectPath
+        return (projectPath, result)
+
       return projectComplexitys
 
 
     computeMethodLevelAvg :: FilePath ->IO [(FilePath, AnalysisResult)]
     computeMethodLevelAvg path = do
 
-      files <-traverseDir path  
+      files <-traverseDir path
       results<-forM (filterHaskellFile files) $ \path -> do
         (file,analysis) <- analyze getConfig path
         return [(file,analysis)]
@@ -271,16 +278,16 @@ server = loadEnvironmentVariable
     computeFileLevelAvg :: FilePath -> IO [(FilePath, Double)]
     computeFileLevelAvg path = liftIO $ do
       input <- computeMethodLevelAvg path
-      avgOfBlock<-forM input $ \block -> do 
+      avgOfBlock<-forM input $ \block -> do
         avgOfFile<-forM (snd block) $ \complexityBlock -> do
           complexityList<-forM complexityBlock $ \cc -> do
-            return $ getComplexity cc 
+            return $ getComplexity cc
           let a = sum complexityList
           let b = length complexityList
           let c = fromIntegral a / fromIntegral b
           return (fst block,c)
         return avgOfFile
-      filteredResult <-forM avgOfBlock $ \a -> do 
+      filteredResult <-forM avgOfBlock $ \a -> do
         case a of Right ele -> return ele
                   Left ele -> return ("undefined",0.0)
       return $ filteredResult
@@ -288,7 +295,7 @@ server = loadEnvironmentVariable
 
 
     computeProjectLevelAvg :: FilePath -> IO Double
-    computeProjectLevelAvg path = do 
+    computeProjectLevelAvg path = do
       result <- computeFileLevelAvg path
       complexityList<- forM result $ \complexityTuple -> do
         putStrLn $ show (snd complexityTuple)
