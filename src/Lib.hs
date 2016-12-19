@@ -78,6 +78,7 @@ import           System.Directory (doesFileExist)
 import           System.Directory (listDirectory)
 import           System.FilePath.Posix
 import           Data.List (isSuffixOf)
+import           Data.List.Split
 -- | The Servant library has a very elegant model for defining a REST API. We shall demonstrate here. First, we shall
 -- define the data types that will be passed in the REST calls. We will define a simple data type that passes some data
 -- from client to the server first. There is nothing special about the data being passed - this is a demonstration
@@ -106,20 +107,19 @@ data ResponseData = ResponseData { response :: String
 -- is Post, then there will be a single ReqBody element that defines the type being transmitted. The return type for
 -- each method is noted in the last element in the :> chain.
 
-data User = User { username :: String
-                  ,  userid :: String
+data Author = Author { username :: String
                  } deriving (Generic, FromJSON, ToJSON, FromBSON)
 
 
 type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSON] ResponseData
       :<|> "getREADME"                  :> Get '[JSON] ResponseData
-      :<|> "storeMessage"               :> ReqBody '[JSON] Message  :> Post '[JSON] Bool
-      :<|> "searchMessage"              :> QueryParam "name" String :> Get '[JSON] [ResponseData]
-      :<|> "performRESTCall"            :> QueryParam "filter" String  :> Get '[JSON] ResponseData
-      :<|> "users"                      :> Get '[JSON] [User]
-      :<|> "user"                       :> Capture "name" String:> Get '[JSON] User
-      :<|> "argon"                      :> Get '[JSON] [(FilePath, AnalysisResult)]
+      :<|> "authors"                    :> Get '[JSON] [Author]
+      :<|> "author"                     :> Capture "name" String:> Get '[JSON] Author
+      :<|> "analysisAllTheRepo"         :> Get '[JSON] [(FilePath, AnalysisResult)]
       :<|> "fetchRepo"                  :> QueryParam "url" String:> Get '[JSON] FetchResponseMsg
+      :<|> "methodComplexity"           :> QueryParam "url" String:> Get '[JSON] [(FilePath, AnalysisResult)]
+      :<|> "fileComplexity"             :> QueryParam "url" String:> Get '[JSON] [(FilePath, Double)]
+      :<|> "projectComplexity"          :> QueryParam "url" String:> Get '[JSON] (String,Double)
 
 data FetchResponseMsg = FetchResponseMsg { msg :: String} deriving (Eq, Show)
 
@@ -175,29 +175,28 @@ api = Proxy
 server :: Server API
 server = loadEnvironmentVariable
     :<|> getREADME
-    :<|> storeMessage
-    :<|> searchMessage
-    :<|> performRESTCall
-    :<|> users
-    :<|> user
-    :<|> argon
+    :<|> authors
+    :<|> author
+    :<|> analysisAllTheRepo
     :<|> fetchRepo
-
+    :<|> methodComplexity
+    :<|> fileComplexity
+    :<|> projectComplexity
 
   where
 
-
-
-    user::String->Handler User
-    user name =liftIO $ do
+    author::String->Handler Author
+    author name =liftIO $ do
       --isFileExist <- doesFileExist "src/Lib.hs"
       --putStrLn $ show $ fileList    
       --result <- listDirectory "./"
       --putStrLn $ show $ result
-      return $ User name "1"
+      result<-computeProjectLevelAvg "./src"
+      putStrLn $ show result
+      return $ Author name
 
-    users::Handler [User]
-    users = return [User "user 1" "1", User "kanika" "2"]
+    authors::Handler [Author]
+    authors = return [Author "aideen", Author "kanika", Author "shifan", Author "andrew"]
 
     -- user::String->Handler User
     -- user name = return $ User name "1"
@@ -208,21 +207,102 @@ server = loadEnvironmentVariable
         case url of
           Nothing -> return $ FetchResponseMsg "aaagggghh!"
           Just url' -> do
+              let url = url'
+              let gitName = last $ splitOn "/" url
+              let name = head $ splitOn "." gitName
+              callCommand $ "git clone " ++ url' ++ " repo/"++name
+              --results<-computeMethodLevelAvg "./"
+              --return (concat results)
+              return $ FetchResponseMsg $ "great success"
+
+    methodComplexity :: Maybe String -> Handler [(FilePath, AnalysisResult)]
+    methodComplexity url = liftIO $ do
+        case url of
+          Nothing -> return $ error "Something Wrong"
+          Just url' -> do
               callCommand $ "git clone " ++ url'
-              return $ FetchResponseMsg "Great Success"
+              let url = url'
+              let gitName = last $ splitOn "/" url
+              let name = head $ splitOn "." gitName
+              results <- computeMethodLevelAvg ("./" ++ name)
+              return results
+
+    fileComplexity :: Maybe String -> Handler [(FilePath, Double)]
+    fileComplexity url = liftIO $ do
+        case url of
+          Nothing -> return $ error "Something Wrong"
+          Just url' -> do
+              callCommand $ "git clone " ++ url'
+              let url = url'
+              let gitName = last $ splitOn "/" url
+              let name = head $ splitOn "." gitName
+              results <- computeFileLevelAvg ("./" ++ name)
+              return results
+
+    projectComplexity :: Maybe String -> Handler (String,Double)
+    projectComplexity url = liftIO $ do
+        case url of
+          Nothing -> return $ error "Something Wrong"
+          Just url' -> do
+              callCommand $ "git clone " ++ url'
+              let url = url'
+              let gitName = last $ splitOn "/" url
+              let name = head $ splitOn "." gitName
+              result <- computeProjectLevelAvg ("./" ++ name)
+              return (name,result)
 
 
-
-    argon :: Handler [(FilePath, AnalysisResult)]
-    argon =liftIO $ do
+    analysisAllTheRepo :: Handler [(FilePath, AnalysisResult)]
+    analysisAllTheRepo =liftIO $ do
       -- args <- parseArgsOrExit patterns =<< getArgs
       -- testArgon
       -- analyze getConfig "src"
-      files <-traverseDir "./"  
+      results<-computeMethodLevelAvg "./repo"
+      return results
+
+
+    computeMethodLevelAvg :: FilePath ->IO [(FilePath, AnalysisResult)]
+    computeMethodLevelAvg path = do
+
+      files <-traverseDir path  
       results<-forM (filterHaskellFile files) $ \path -> do
         (file,analysis) <- analyze getConfig path
         return [(file,analysis)]
       return (concat results)
+
+    computeFileLevelAvg :: FilePath -> IO [(FilePath, Double)]
+    computeFileLevelAvg path = liftIO $ do
+      input <- computeMethodLevelAvg path
+      avgOfBlock<-forM input $ \block -> do 
+        avgOfFile<-forM (snd block) $ \complexityBlock -> do
+          complexityList<-forM complexityBlock $ \cc -> do
+            return $ getComplexity cc 
+          let a = sum complexityList
+          let b = length complexityList
+          let c = fromIntegral a / fromIntegral b
+          return (fst block,c)
+        return avgOfFile
+      filteredResult <-forM avgOfBlock $ \a -> do 
+        case a of Right ele -> return ele
+                  Left ele -> return ("undefined",0.0)
+      return $ filteredResult
+
+
+
+    computeProjectLevelAvg :: FilePath -> IO Double
+    computeProjectLevelAvg path = do 
+      result <- computeFileLevelAvg path
+      complexityList<- forM result $ \complexityTuple -> do
+        putStrLn $ show (snd complexityTuple)
+        return (snd complexityTuple)
+      return (sum $ filter (not.isNaN) complexityList)
+
+
+    getComplexity :: ComplexityBlock -> Int
+    getComplexity ( CC tuple ) = getComplexity' tuple
+
+    getComplexity' :: (Loc, String, Int) -> Int
+    getComplexity' ( _,_,complexity ) = complexity
 
 
     loadEnvironmentVariable :: Maybe String -> Handler ResponseData
@@ -278,120 +358,6 @@ server = loadEnvironmentVariable
     -- in english, read file idenfitied by the head of the argument list and return as a ResponseData structure
     getREADME' = liftIO $ ResponseData <$> (readFile . head =<< getArgs)
 
-    -- Here, as a comparison or relative code complexity,
-    -- is an example of how to perform the equivalent of the
-    -- Haskell readFile method in Java, but remember that this
-    -- implementation would break for very large files. You will achieve nothing like the getREADME' implementation
-    -- in Java without great skill, if at all.
-    --
-    -- static String readFile(String path, Charset encoding)
-    --    throws IOException
-    -- {
-    --   byte[] encoded = Files.readAllBytes(Paths.get(path));
-    --   return new String(encoded, encoding);
-    -- }
-
-    -- | Next we will do Database manipulation and search. We shall use MongoDb as the database. This gives us the
-    -- advantage of not having to do any database configuration - we can start writing data into the data store
-    -- immediately. Note how we extract the parameter elements directly in the method definition via pattern
-    -- matching. nice. Ps. '_' means we don't care what value is.
-    storeMessage :: Message -> Handler Bool
-    storeMessage msg@(Message key _) = liftIO $ do
-      warnLog $ "Storing message under key " ++ key ++ "."
-
-      -- upsert creates a new record if the identified record does not exist, or if
-      -- it does exist, it updates the record with the passed document content
-      -- As you can see, this takes a single line of code
-      withMongoDbConnection $ upsert (select ["name" =: key] "MESSAGE_RECORD") $ toBSON msg
-
-      return True  -- as this is a simple demo I'm not checking anything
-
-    searchMessage :: Maybe String -> Handler [ResponseData]
-    searchMessage (Just key) = liftIO $ do
-      warnLog $ "Searching for value for key: " ++ key
-
-      -- Find the relevant documents from the DB, take the returned data records and convert the relevant data to
-      -- ResponseData records, eliminating any failures to convert, compacting to a returned simple array
-      -- done in fewer lines than it takes to describe (and with fully idomatic Haskell, perhaps a single line of code).
-      --
-      -- 'map' take a function that processes each element in a list, and a list, and returns a list that results from
-      -- processing each element of a list. The function passed calls fromBSON, that takes the Document element from the
-      -- list and generates the ResponseData data structure if possible, return 'Just s', or on failure returns Nothing.
-      --
-      -- catMaybes is a standard filtering library function that can take a set of Maybe type (Nothing or Just something)
-      -- and return an array of the contained elements. There is no magic to catMaybes - its entire implementation is as
-      -- follows:
-      --            catMaybes :: [Maybe a] -> [a]
-      --            catMaybes ls = [x | Just x <- ls]
-
-      withMongoDbConnection $ do
-        docs <- find (select ["name" =: key] "MESSAGE_RECORD") >>= drainCursor
-        return $ catMaybes $ DL.map (\ b -> fromBSON b :: Maybe ResponseData) docs
-
-      -- notice the structure of the first line of code: fn1 >>= fn2
-      -- An alternative way to write this is:
-      --        a <- fn1
-      --        b <- fn2 a
-      -- but for short IO function chains, it can be easier to use >>= to chain them.
-      --
-      -- In fact, the code above can be compressed further, although it is a question of style as to which is
-      -- preferable:
-      --
-      --     withMongoDbConnection $ find (select ["name" =: key] "MESSAGE_RECORD") >>= drainCursor >>=
-      --                                return . catMaybes . DL.map (\ b -> fromBSON b :: Maybe ResponseData)
-      --
-      -- The effect of the '.' is to chain a set of functions A . B . C into a single function X, so that when one calls
-      -- X p, C is called on the parameter p first, followed by B on the result, followed by A of the result of
-      -- that. This is exactly equivalent in effect to a function \p ->(A (B (C p))).
-
-    -- This second version of searchMessage will only be called if the parameter passed has the Value 'Nothing'
-    -- in other words, we are stripping away the case where we are passed nonsense from the primary implementation
-    -- above, which can now be focussed on just handing the normal case where we get a valid input. This simplifies the
-    -- code, making it far easier to maintain. Also, in cases where the input can be more complex than just a Maybe
-    -- type, it allows you as a programming style to separate out the complexity of working out what you have been
-    -- given. In the Socket progrmming, if you adopted a decent style, you probably spent quite a lot of time writing
-    -- handler functions that did exactly this kind of plumbing. No need in Haskell - you get it for free, and entirely
-    -- type checked. This is a big win in practice.
-    searchMessage Nothing = liftIO $ do
-      warnLog $ "No key for searching."
-      return $ ([] :: [ResponseData])
-
-    -- | Performing a REST call
-    -- The following function performs a REST call to a remote service 'hackage.haskell.org'. This remote service is a
-    -- searchable documentation server. The API to the service is accessible at http://hackage.haskell.org
-    performRESTCall :: Maybe String -> Handler ResponseData
-    performRESTCall (Just filt) = liftIO $ do
-      warnLog $ "recieved request to perform REST call with param " ++ filt
-      doRest $ DL.filter (DL.isInfixOf filt)
-
-    -- | An implementation when no parameter is passed, no filtering so.
-    performRESTCall Nothing = liftIO $ do
-      warnLog $ "recieved request to perform REST call, but no param "
-      doRest id
-
-    -- | the performRESTCall is delegated to this function, with a filtering function passed as a parameter
-    doRest :: ([String] -> [String]) -> IO ResponseData
-    doRest flt = do
-      -- first we perform the call to hackage.org, then we will extract the package names and filter
-      -- to include only package names matching the 'filt' parameter, returning a comma separated string of those
-      -- packages.
-      res <- SC.runClientM getPackages =<< env   -- the actual REST call
-      case res of
-        Left err -> do
-          warnLog $ "Rest call failed with error: " ++ show err
-          return $ ResponseData $ "Rest call failed with error: " ++ show err
-        Right pkgs -> do
-          return $ ResponseData $ DL.intercalate ", " $                          -- reduce to comma separated string
-                                  flt $                                          -- run the filtering function
-                                  DL.map (unpack . RestClient.packageName) pkgs  -- extract name and convert to string
-      where env = do
-             manager <- newManager defaultManagerSettings
-             return (SC.ClientEnv manager (SC.BaseUrl SC.Http "hackage.haskell.org" 80 ""))
-
--- What follows next is some helper function code that makes it easier to do warious things such as use
--- a mongoDB, post console log statements define environment variables for use in your programmes and so forth.
--- The code is not written particularly to be understood by novice Haskellers, but should be useable relatively easily
--- as set out above.
 
 -- | error stuff
 custom404Error msg = err404 { errBody = msg }
@@ -424,51 +390,7 @@ withLogging act = withStdoutLogger $ \aplogger -> do
   act aplogger
 
 
--- | Mongodb helpers...
 
--- | helper to open connection to mongo database and run action
--- generally run as follows:
---        withMongoDbConnection $ do ...
---
-withMongoDbConnection :: Action IO a -> IO a
-withMongoDbConnection act  = do
-  ip <- mongoDbIp
-  port <- mongoDbPort
-  database <- mongoDbDatabase
-  pipe <- connect (host ip)
-  ret <- runResourceT $ liftIO $ access pipe master (pack database) act
-  close pipe
-  return ret
-
--- | helper method to ensure we force extraction of all results
--- note how it is defined recursively - meaning that draincursor' calls itself.
--- the purpose is to iterate through all documents returned if the connection is
--- returning the documents in batch mode, meaning in batches of retruned results with more
--- to come on each call. The function recurses until there are no results left, building an
--- array of returned [Document]
-drainCursor :: Cursor -> Action IO [Document]
-drainCursor cur = drainCursor' cur []
-  where
-    drainCursor' cur res  = do
-      batch <- nextBatch cur
-      if null batch
-        then return res
-        else drainCursor' cur (res ++ batch)
-
--- | Environment variable functions, that return the environment variable if set, or
--- default values if not set.
-
--- | The IP address of the mongoDB database that devnostics-rest uses to store and access data
-mongoDbIp :: IO String
-mongoDbIp = defEnv "MONGODB_IP" id "database" True
-
--- | The port number of the mongoDB database that devnostics-rest uses to store and access data
-mongoDbPort :: IO Integer
-mongoDbPort = defEnv "MONGODB_PORT" read 27017 False -- 27017 is the default mongodb port
-
--- | The name of the mongoDB database that devnostics-rest uses to store and access data
-mongoDbDatabase :: IO String
-mongoDbDatabase = defEnv "MONGODB_DATABASE" id "USEHASKELLDB" True
 
 -- | Determines log reporting level. Set to "DEBUG", "WARNING" or "ERROR" as preferred. Loggin is
 -- provided by the hslogger library.
