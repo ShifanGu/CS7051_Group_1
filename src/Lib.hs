@@ -255,10 +255,7 @@ server = loadEnvironmentVariable
 
     analysisAllTheRepo :: Handler [(FilePath, AnalysisResult)]
     analysisAllTheRepo =liftIO $ do
-      -- args <- parseArgsOrExit patterns =<< getArgs
-      -- testArgon
-      -- analyze getConfig "src"
-      results<-computeMethodLevelAvg "./repo"
+      --results<-computeMethodLevelAvg "./repo"
       return results
 
 
