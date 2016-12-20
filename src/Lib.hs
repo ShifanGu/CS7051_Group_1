@@ -80,47 +80,12 @@ import           System.FilePath.Posix
 import           Data.List (isSuffixOf)
 import           Data.List.Split
 import           Network.HTTP(simpleHTTP,getRequest,getResponseBody,getResponseCode,ResponseCode)
+import           RepoComplexityApi
 -- | The Servant library has a very elegant model for defining a REST API. We shall demonstrate here. First, we shall
 -- define the data types that will be passed in the REST calls. We will define a simple data type that passes some data
 -- from client to the server first. There is nothing special about the data being passed - this is a demonstration
 -- only. data types are kind of like structs in C or C++.
 
-data Message = Message { name    :: String
-                       , message :: String
-                       } deriving (Generic, FromJSON, ToBSON, FromBSON)
-
-deriving instance FromBSON String  -- we need these as BSON does not provide
-deriving instance ToBSON   String
-
--- | We will also define a simple data type for returning data from a REST call, again with nothing special or
--- particular in the response, but instead merely as a demonstration.
-
-data ResponseData = ResponseData { response :: String
-                                 } deriving (Generic, ToJSON, FromJSON,FromBSON)
-
--- | Next we will define the API for the REST service. This is defined as a 'type' using a special syntax from the
--- Servant Library. A REST endpoint is defined by chaining together a series of elements in the format `A :> B :> C`. A
--- set of rest endpoints are chained in the format `X :<|> Y :<|> Z`. We define a set of endpoints to demonstrate
--- functionality as described int he README.md file below.
---
--- Note in the API below that we can mix GET and Post methods. The type of call is determined by the last element in the
--- :> chain. If the method is Get, then the set of QueryParams determine the attributes of the Get call. If the method
--- is Post, then there will be a single ReqBody element that defines the type being transmitted. The return type for
--- each method is noted in the last element in the :> chain.
-
-data Author = Author { username :: String
-                 } deriving (Generic, FromJSON, ToJSON, FromBSON)
-
-
-type API = "load_environment_variables" :> QueryParam "name" String :> Get '[JSON] ResponseData
-      :<|> "getREADME"                  :> Get '[JSON] ResponseData
-      :<|> "authors"                    :> Get '[JSON] [Author]
-      :<|> "author"                     :> Capture "name" String:> Get '[JSON] Author
-      :<|> "analysisAllTheRepo"         :> Get '[JSON] [(FilePath, Double)]
-      :<|> "fetchRepo"                  :> QueryParam "url" String:> Get '[JSON] FetchResponseMsg
-      :<|> "methodComplexity"           :> QueryParam "url" String:> Get '[JSON] [(FilePath, AnalysisResult)]
-      :<|> "fileComplexity"             :> QueryParam "url" String:> Get '[JSON] [(FilePath, Double)]
-      :<|> "projectComplexity"          :> QueryParam "url" String:> Get '[JSON] (String,Double)
 
 data FetchResponseMsg = FetchResponseMsg { msg :: String} deriving (Eq, Show)
 
@@ -203,10 +168,10 @@ server = loadEnvironmentVariable
     -- user name = return $ User name "1"
 
 
-    fetchRepo :: Maybe String -> Handler FetchResponseMsg
+    fetchRepo :: Maybe String -> Handler ResponseData
     fetchRepo url = liftIO $ do
         case url of
-          Nothing -> return $ FetchResponseMsg "aaagggghh!"
+          Nothing -> return $ ResponseData "aaagggghh!"
           Just url' -> do
               let url = url'
               let gitName = last $ splitOn "/" url
@@ -214,7 +179,7 @@ server = loadEnvironmentVariable
               callCommand $ "git clone " ++ url' ++ " repo/"++name
               --results<-computeMethodLevelAvg "./"
               --return (concat results)
-              return $ FetchResponseMsg $ "great success"
+              return $ ResponseData $ "great success"
 
     methodComplexity :: Maybe String -> Handler [(FilePath, AnalysisResult)]
     methodComplexity url = liftIO $ do
