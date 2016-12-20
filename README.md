@@ -46,3 +46,6 @@ this will give back the project level complexity of the project
 ```json
 ["haskelldocumentation",38.50774932614555]
 ```
+
+##Author
+This project is created and maintained by [Shifan Gu](https://github.com/ShifanGu/), [Andrew Comey](https://github.com/acomey), [Kanika Shreya](https://github.com/shreyakanika15) and Aideen Darker. 
