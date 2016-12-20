@@ -255,7 +255,14 @@ server = loadEnvironmentVariable
 
     analysisAllTheRepo :: Handler [(FilePath, Double)]
     analysisAllTheRepo =liftIO $ do
-      --wait to finish
+      --results<-computeMethodLevelAvg "./repo"
+      projectNames <- listDirectory "./repo"
+      projectPaths <- forM projectNames $ \project -> do
+        return ("./repo/"++project)
+      projectComplexitys <- forM projectPaths $ \projectPath -> do
+        result<-computeProjectLevelAvg projectPath
+        return (projectPath, result)
+
       return projectComplexitys
 
 
