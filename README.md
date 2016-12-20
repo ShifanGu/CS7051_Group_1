@@ -20,7 +20,7 @@ $ stack exec repo-complexity-analyer
 ```
 open the browser
 ```sh
-localhost:8080/methodComplexity?url=https://github.com/commercialhaskell/haskelldocumentation.git
+http://localhost:8080/methodComplexity?url=https://github.com/commercialhaskell/haskelldocumentation.git
 ```
 this will give back the method level complexity of the project
 
@@ -30,7 +30,7 @@ this will give back the method level complexity of the project
 
 
 ```sh
-localhost:8080/fileComplexity?url=https://github.com/commercialhaskell/haskelldocumentation.git
+http://localhost:8080/fileComplexity?url=https://github.com/commercialhaskell/haskelldocumentation.git
 ```
 this will give back the file level complexity of the project
 
@@ -39,7 +39,7 @@ this will give back the file level complexity of the project
 ```
 
 ```sh
-localhost:8080/methodComplexity?url=https://github.com/commercialhaskell/haskelldocumentation.git
+http://localhost:8080/methodComplexity?url=https://github.com/commercialhaskell/haskelldocumentation.git
 ```
 this will give back the project level complexity of the project
 
