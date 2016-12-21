@@ -43,4 +43,4 @@ curl localhost:8080/fetchRepo/?url=https://github.com/Rydgel/flappy-haskell.git
 curl localhost:8080/fetchRepo/?url=https://github.com/ajtulloch/haskell-ml.git
 curl localhost:8080/fetchRepo/?url=https://github.com/oxij/haskell-course-ru.git
 curl localhost:8080/fetchRepo/?url=https://github.com/kirel/detexify-hs-backend.git
-curl localhost:8080/analysisAllTheRepo
+curl localhost:8080/analysisAllTheRepo >> result.json
