@@ -186,11 +186,12 @@ server = loadEnvironmentVariable
         case url of
           Nothing -> return $ error "Something Wrong"
           Just url' -> do
-              callCommand $ "git clone " ++ url'
               let url = url'
               let gitName = last $ splitOn "/" url
               let name = head $ splitOn "." gitName
-              results <- computeMethodLevelAvg ("./" ++ name)
+              callCommand $ "git clone " ++ url' ++ " repo/"++name
+              results <- computeMethodLevelAvg ("./repo/" ++ name)
+              callCommand $ "rm -rf " ++ " ./repo/"++name
               return results
 
     fileComplexity :: Maybe String -> Handler [(FilePath, Double)]
@@ -198,11 +199,12 @@ server = loadEnvironmentVariable
         case url of
           Nothing -> return $ error "Something Wrong"
           Just url' -> do
-              callCommand $ "git clone " ++ url'
               let url = url'
               let gitName = last $ splitOn "/" url
               let name = head $ splitOn "." gitName
-              results <- computeFileLevelAvg ("./" ++ name)
+              callCommand $ "git clone " ++ url' ++ " repo/" ++ name
+              results <- computeFileLevelAvg ("./repo/" ++ name)
+              callCommand $ "rm -rf " ++ " ./repo/"++name
               return results
 
     projectComplexity :: Maybe String -> Handler (String,Double)
@@ -210,11 +212,12 @@ server = loadEnvironmentVariable
         case url of
           Nothing -> return $ error "Something Wrong"
           Just url' -> do
-              callCommand $ "git clone " ++ url'
               let url = url'
               let gitName = last $ splitOn "/" url
               let name = head $ splitOn "." gitName
-              result <- computeProjectLevelAvg ("./" ++ name)
+              callCommand $ "git clone " ++ url' ++ " repo/" ++ name
+              result <- computeProjectLevelAvg ("./repo/" ++ name)
+              callCommand $ "rm -rf " ++ " ./repo/"++name
               return (name,result)
 
 --to analyze the repositories
@@ -226,7 +229,8 @@ server = loadEnvironmentVariable
         return ("./repo/"++project)
       projectComplexitys <- forM projectPaths $ \projectPath -> do
         result<-computeProjectLevelAvg projectPath
-        return (projectPath, result)
+        let name = last $ splitOn "/" projectPath
+        return (name, result)
 
       return projectComplexitys
 
@@ -263,7 +267,6 @@ server = loadEnvironmentVariable
     computeProjectLevelAvg path = do
       result <- computeFileLevelAvg path
       complexityList<- forM result $ \complexityTuple -> do
-        putStrLn $ show (snd complexityTuple)
         return (snd complexityTuple)
       return (sum $ filter (not.isNaN) complexityList)
 
