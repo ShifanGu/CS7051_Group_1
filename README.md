@@ -1,7 +1,7 @@
 # repo-complexity-analyzer
 
 ## Introduction
-In this project, repo-complexity-analyzer is designed to fetch the repositories all together and analysing them and filtering the Haskell files from it for the calculation of complexity. We will use Argon Haskell library for the calculation of complexity. It is a quantitative measure of the number of linearly independent paths through the code. The intended usage is through Argon's executable, which accepts a list of files or directories to analyse. The data can be optionally exported to JSON. The files which we get after analysing we are trying to calculate the complexity with method, file and project level.
+In this project, repo-complexity-analyzer is designed to fetch the repositories all together and analysing them and filtering the Haskell files from it for the calculation of complexity. We will use Argon Haskell library for the calculation of complexity. It is a quantitative measure of the number of linearly independent paths through the code. The intended usage is through Argon's executable, which accepts a list of files or directories to analyse. The data can be optionally exported to JSON. The files which we get after the analysis done, we are trying to calculate the complexity with different methods for project level and file level.
 
 ## Useage
 
